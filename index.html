@@ -159,23 +159,25 @@
 
             <!-- Div para resultados e estatísticas -->
             <div id="results" class="hidden mt-8 transition-all duration-300">
-                <!-- Estatísticas -->
-                <div class="bg-gray-50 rounded-lg p-4 mb-6 shadow-sm">
+                <!-- Estatísticas em formato de tabela -->
+                <div class="bg-gray-50 rounded-lg p-4 mb-6 shadow-sm overflow-x-auto scrollbar-hide">
                     <h2 class="text-xl font-bold text-gray-800 mb-3">Resumo dos Preços</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="bg-white rounded-lg p-3 shadow-sm border border-gray-200 text-center">
-                            <p class="text-xs text-gray-500">Média Interna</p>
-                            <p id="trimmed-mean" class="text-xl font-bold text-blue-600">--</p>
-                        </div>
-                        <div class="bg-white rounded-lg p-3 shadow-sm border border-gray-200 text-center">
-                            <p class="text-xs text-gray-500">Mediana</p>
-                            <p id="median" class="text-xl font-bold text-green-600">--</p>
-                        </div>
-                        <div class="bg-white rounded-lg p-3 shadow-sm border border-gray-200 text-center">
-                            <p class="text-xs text-gray-500">Moda</p>
-                            <p id="mode" class="text-xl font-bold text-purple-600">--</p>
-                        </div>
-                    </div>
+                    <table class="w-full text-center">
+                        <thead>
+                            <tr class="text-gray-600 uppercase text-xs leading-normal">
+                                <th class="py-2">Média Interna</th>
+                                <th class="py-2">Mediana</th>
+                                <th class="py-2">Moda</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="font-bold text-lg">
+                                <td id="trimmed-mean" class="py-2 text-blue-600">--</td>
+                                <td id="median" class="py-2 text-green-600">--</td>
+                                <td id="mode" class="py-2 text-purple-600">--</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
 
                 <!-- Tabela de Resultados -->
@@ -208,6 +210,14 @@
             <!-- Div para mensagens de erro -->
             <div id="message-box" class="hidden mt-8 text-center text-gray-600 p-4 rounded-lg border border-gray-300">
                 <p id="message-text">Nenhum resultado encontrado.</p>
+            </div>
+            
+            <!-- Botão de link centralizado -->
+            <div class="flex justify-center mt-8">
+                <a href="https://economizaalagoas.sefaz.al.gov.br/economizaalagoas.htm" target="_blank"
+                   class="bg-gray-200 text-gray-700 font-bold py-1 px-3 rounded-lg shadow-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 transition duration-200 text-xs">
+                    Clique aqui caso queria acessar a página oficial do governo do estado
+                </a>
             </div>
         </div>
     </div>
@@ -421,4 +431,3 @@
     </script>
 </body>
 </html>
-
