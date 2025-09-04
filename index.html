@@ -114,9 +114,8 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // URL do proxy
+            const BASE_URL = "http://api.sefaz.al.gov.br/sfz-economiza-alagoas-api/api/public/";
             const PROXY_URL = 'https://corsproxy.io/?';
-            const BASE_URL = PROXY_URL + encodeURIComponent("http://api.sefaz.al.gov.br/sfz-economiza-alagoas-api/api/public/");
             const APP_TOKEN = "3d0979f6358f21a20840530109466f451e2d51b5";
             const headers = {
                 "Content-Type": "application/json",
@@ -229,33 +228,53 @@
                     "registrosPorPagina": 500
                 };
                 
-                const requestUrl = BASE_URL + encodeURIComponent("produto/pesquisa");
+                let data = null;
+                let requestUrl = BASE_URL + "produto/pesquisa";
 
+                // Tentativa 1: sem proxy
                 try {
                     const response = await fetch(requestUrl, {
                         method: 'POST',
                         headers: headers,
                         body: JSON.stringify(payload)
                     });
-
-                    const data = await response.json();
-                    if (response.status === 200) {
-                        allResults = data.conteudo;
-                        renderResults(allResults);
-                    } else {
-                        allResults = [];
-                        messageBox.classList.remove('hidden');
-                        messageText.textContent = `Erro: ${data.mensagem || 'Ocorreu um erro na requisição.'}`;
-                        resultsDiv.classList.add('hidden');
+                    data = await response.json();
+                    if (response.status !== 200) {
+                        data = null;
                     }
                 } catch (error) {
+                    console.error("Erro na tentativa direta:", error);
+                }
+
+                // Tentativa 2: com proxy
+                if (!data) {
+                    requestUrl = PROXY_URL + encodeURIComponent(BASE_URL + "produto/pesquisa");
+                    try {
+                        const response = await fetch(requestUrl, {
+                            method: 'POST',
+                            headers: headers,
+                            body: JSON.stringify(payload)
+                        });
+                        data = await response.json();
+                        if (response.status !== 200) {
+                            data = null;
+                        }
+                    } catch (error) {
+                        console.error("Erro na tentativa com proxy:", error);
+                    }
+                }
+
+                if (data && data.conteudo) {
+                    allResults = data.conteudo;
+                    renderResults(allResults);
+                } else {
                     allResults = [];
                     messageBox.classList.remove('hidden');
-                    messageText.textContent = 'Não foi possível conectar à API. Verifique sua conexão ou tente novamente mais tarde.';
+                    messageText.textContent = `Não foi possível conectar à API. Verifique sua conexão ou tente novamente mais tarde.`;
                     resultsDiv.classList.add('hidden');
-                } finally {
-                    loaderDiv.classList.add('hidden');
                 }
+                
+                loaderDiv.classList.add('hidden');
             };
             
             const downloadCsv = () => {
