@@ -80,7 +80,12 @@
 
                 <!-- Tabela de Resultados -->
                 <div class="bg-gray-50 rounded-lg p-4 shadow-sm">
-                    <h2 class="text-xl font-bold text-gray-800 mb-3">Resultados da Pesquisa</h2>
+                    <div class="flex flex-col md:flex-row justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold text-gray-800 mb-2 md:mb-0">Resultados da Pesquisa</h2>
+                        <button id="download-button" class="w-full md:w-auto bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-green-700 transition duration-200">
+                            Baixar Dados (CSV)
+                        </button>
+                    </div>
                     <input type="text" id="company-filter" placeholder="Filtrar por nome da empresa..."
                            class="w-full mb-4 px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200">
                     <div class="overflow-x-auto scrollbar-hide">
@@ -117,6 +122,7 @@
             };
 
             const searchButton = document.getElementById('search-button');
+            const downloadButton = document.getElementById('download-button');
             const productSearchInput = document.getElementById('product-search');
             const citySelect = document.getElementById('city-select');
             const resultsDiv = document.getElementById('results');
@@ -128,6 +134,8 @@
             const companyFilterInput = document.getElementById('company-filter');
             const messageBox = document.getElementById('message-box');
             const messageText = document.getElementById('message-text');
+
+            let allResults = []; // Variável para armazenar os dados
 
             const calculateStatistics = (prices) => {
                 if (prices.length === 0) {
@@ -228,13 +236,16 @@
 
                     const data = await response.json();
                     if (response.status === 200) {
-                        renderResults(data.conteudo);
+                        allResults = data.conteudo; // Armazena os resultados na variável
+                        renderResults(allResults);
                     } else {
+                        allResults = [];
                         messageBox.classList.remove('hidden');
                         messageText.textContent = `Erro: ${data.mensagem || 'Ocorreu um erro na requisição.'}`;
                         resultsDiv.classList.add('hidden');
                     }
                 } catch (error) {
+                    allResults = [];
                     messageBox.classList.remove('hidden');
                     messageText.textContent = 'Não foi possível conectar à API. Verifique sua conexão.';
                     resultsDiv.classList.add('hidden');
@@ -243,7 +254,46 @@
                 }
             };
             
+            const downloadCsv = () => {
+                if (allResults.length === 0) {
+                    messageBox.classList.remove('hidden');
+                    messageText.textContent = 'Não há dados para baixar. Faça uma pesquisa primeiro.';
+                    return;
+                }
+
+                const headers = ["descricao", "valorVenda", "dataVenda", "nomeFantasia", "razaoSocial", "cnpj", "municipio", "bairro"];
+                let csvContent = "data:text/csv;charset=utf-8," + headers.join(";") + "\n";
+                
+                allResults.forEach(item => {
+                    const produto = item.produto;
+                    const estabelecimento = item.estabelecimento;
+                    const venda = produto.venda;
+
+                    const row = [
+                        produto.descricao,
+                        venda.valorVenda,
+                        new Date(venda.dataVenda).toLocaleDateString('pt-BR'),
+                        estabelecimento.nomeFantasia,
+                        estabelecimento.razaoSocial,
+                        estabelecimento.cnpj,
+                        estabelecimento.endereco.municipio,
+                        estabelecimento.endereco.bairro
+                    ].map(value => `"${String(value).replace(/"/g, '""')}"`).join(";");
+
+                    csvContent += row + "\n";
+                });
+                
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "analise_precos.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            };
+
             searchButton.addEventListener('click', fetchData);
+            downloadButton.addEventListener('click', downloadCsv);
             
             // Filtro de empresas
             companyFilterInput.addEventListener('input', (e) => {
