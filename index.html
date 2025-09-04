@@ -114,7 +114,9 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const BASE_URL = "http://api.sefaz.al.gov.br/sfz-economiza-alagoas-api/api/public/";
+            // URL do proxy
+            const PROXY_URL = 'https://corsproxy.io/?';
+            const BASE_URL = PROXY_URL + encodeURIComponent("http://api.sefaz.al.gov.br/sfz-economiza-alagoas-api/api/public/");
             const APP_TOKEN = "3d0979f6358f21a20840530109466f451e2d51b5";
             const headers = {
                 "Content-Type": "application/json",
@@ -135,7 +137,7 @@
             const messageBox = document.getElementById('message-box');
             const messageText = document.getElementById('message-text');
 
-            let allResults = []; // Variável para armazenar os dados
+            let allResults = [];
 
             const calculateStatistics = (prices) => {
                 if (prices.length === 0) {
@@ -164,7 +166,7 @@
                         maxCount = counts[price];
                         modeValue = parseFloat(price);
                     } else if (counts[price] === maxCount) {
-                        modeValue = null; // Múltiplas modas
+                        modeValue = null;
                     }
                 }
                 
@@ -226,9 +228,11 @@
                     "pagina": 1,
                     "registrosPorPagina": 500
                 };
+                
+                const requestUrl = BASE_URL + encodeURIComponent("produto/pesquisa");
 
                 try {
-                    const response = await fetch(BASE_URL + "produto/pesquisa", {
+                    const response = await fetch(requestUrl, {
                         method: 'POST',
                         headers: headers,
                         body: JSON.stringify(payload)
@@ -236,7 +240,7 @@
 
                     const data = await response.json();
                     if (response.status === 200) {
-                        allResults = data.conteudo; // Armazena os resultados na variável
+                        allResults = data.conteudo;
                         renderResults(allResults);
                     } else {
                         allResults = [];
@@ -247,7 +251,7 @@
                 } catch (error) {
                     allResults = [];
                     messageBox.classList.remove('hidden');
-                    messageText.textContent = 'Não foi possível conectar à API. Verifique sua conexão.';
+                    messageText.textContent = 'Não foi possível conectar à API. Verifique sua conexão ou tente novamente mais tarde.';
                     resultsDiv.classList.add('hidden');
                 } finally {
                     loaderDiv.classList.add('hidden');
@@ -295,7 +299,6 @@
             searchButton.addEventListener('click', fetchData);
             downloadButton.addEventListener('click', downloadCsv);
             
-            // Filtro de empresas
             companyFilterInput.addEventListener('input', (e) => {
                 const filterText = e.target.value.toLowerCase();
                 const rows = resultsTableBody.getElementsByTagName('tr');
