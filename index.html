@@ -1,50 +1,206 @@
-import functions_framework
-import requests
-import os
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análise de Preços</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #374151;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-4 min-h-screen flex items-center justify-center">
+    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-2xl">
+        <h1 class="text-3xl font-bold mb-6 text-center text-gray-800">Economiza Alagoas - Pesquisa de Preços</h1>
+        <div class="mb-4">
+            <label for="municipality-select" class="block text-gray-700 font-semibold mb-2">Selecione o Município:</label>
+            <select id="municipality-select" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="2704302" selected>Maceió</option>
+                <option value="2700300">Arapiraca</option>
+                <option value="2706307">Palmeira dos Índios</option>
+                <option value="2709301">União dos Palmares</option>
+            </select>
+        </div>
+        <div class="mb-4">
+            <label for="search-term" class="block text-gray-700 font-semibold mb-2">Digite o produto:</label>
+            <div class="flex rounded-lg shadow-sm">
+                <input type="text" id="search-term" class="flex-1 p-3 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: Arroz Tio João 5kg">
+                <button id="search-button" class="bg-blue-600 text-white p-3 rounded-r-lg hover:bg-blue-700 transition-colors duration-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </button>
+            </div>
+        </div>
 
-# O AppToken deve ser mantido em segurança e não exposto no código do cliente.
-# Por isso, ele está aqui, na nossa função de backend.
-# O AppToken foi obtido do seu arquivo analise_precos.py
-APP_TOKEN = "3d0979f6358f21a20840530109466f451e2d51b5"
-BASE_URL = "http://api.sefaz.al.gov.br/sfz-economiza-alagoas-api/api/public/"
+        <div id="status-message" class="mt-4 p-3 rounded-lg text-center" style="display: none;"></div>
 
-@functions_framework.http
-def proxy_api(request):
-    """Função HTTP para atuar como um proxy para a API Economiza Alagoas."""
-    
-    # Define os headers da requisição, incluindo o AppToken
-    headers = {
-        "Content-Type": "application/json",
-        "AppToken": APP_TOKEN
-    }
-    
-    # Obtém o payload da requisição do cliente
-    request_json = request.get_json(silent=True)
-    if not request_json:
-        return {"error": "Corpo da requisição não encontrado ou inválido"}, 400
+        <div id="results-container" class="mt-6 space-y-4" style="display: none;">
+            <div id="summary-card" class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
+                <h2 class="font-bold text-blue-800 mb-2">Resumo da Pesquisa</h2>
+                <p id="total-results" class="text-sm text-blue-700"></p>
+                <p id="average-price" class="text-lg font-semibold text-blue-900 mt-1"></p>
+                <p id="mode-price" class="text-sm text-blue-700 mt-1"></p>
+                <p id="median-price" class="text-sm text-blue-700 mt-1"></p>
+            </div>
 
-    try:
-        # Define a URL da API externa com base no tipo de pesquisa
-        endpoint = request_json.get("endpoint", "produto/pesquisa")
-        url = BASE_URL + endpoint
+            <div id="stores-list-card" class="bg-gray-50 border-l-4 border-gray-500 p-4 rounded-lg">
+                <h2 class="font-bold text-gray-800 mb-2">Preços por Estabelecimento</h2>
+                <ul id="stores-list" class="space-y-2"></ul>
+            </div>
+        </div>
+    </div>
+    <div class="mt-4 text-center">
+        <a href="http://economizaalagoas.sefaz.al.gov.br/" target="_blank" class="text-blue-600 hover:underline">Visite o site oficial do governo</a>
+    </div>
 
-        # Remove o campo 'endpoint' do payload antes de enviar para a API externa
-        payload = {k: v for k, v in request_json.items() if k != "endpoint"}
-        
-        # Faz a requisição POST para a API externa
-        response = requests.post(url, headers=headers, json=payload, timeout=30)
-        
-        # Retorna o conteúdo e o status da resposta da API externa
-        response.raise_for_status() # Lança um erro se o status for 4xx ou 5xx
-        return (response.json(), response.status_code, {"Content-Type": "application/json"})
-    
-    except requests.exceptions.HTTPError as errh:
-        return {"error": f"Erro HTTP: {errh}", "status_code": errh.response.status_code}, errh.response.status_code
-    except requests.exceptions.ConnectionError as errc:
-        return {"error": f"Erro de conexão: {errc}"}, 503
-    except requests.exceptions.Timeout as errt:
-        return {"error": f"Timeout da requisição: {errt}"}, 504
-    except requests.exceptions.RequestException as err:
-        return {"error": f"Erro na requisição: {err}"}, 500
-    except Exception as e:
-        return {"error": f"Erro inesperado: {str(e)}"}, 500
+    <script>
+        // URL da sua Cloud Function implantada no Firebase
+        const API_URL = "https://us-central1-dev-zephyr-468119-k0.cloudfunctions.net/proxy_api";
+
+        document.getElementById('search-button').addEventListener('click', fetchData);
+        document.getElementById('search-term').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                fetchData();
+            }
+        });
+
+        async function fetchData() {
+            const searchTerm = document.getElementById('search-term').value.trim();
+            const municipalityCode = document.getElementById('municipality-select').value;
+
+            if (!searchTerm) {
+                showMessage("Por favor, digite um produto para pesquisar.", "bg-red-100 text-red-700");
+                return;
+            }
+
+            showMessage("Pesquisando... isso pode levar alguns segundos.", "bg-yellow-100 text-yellow-700");
+            hideResults();
+
+            const payload = {
+                "endpoint": "produto/pesquisa",
+                "produto": {"descricao": searchTerm},
+                "estabelecimento": {"municipio": {"codigoIBGE": municipalityCode}},
+                "dias": 5,
+                "pagina": 1,
+                "registrosPorPagina": 500
+            };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload),
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Erro na rede: ${response.status} ${errorText}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.conteudo && data.conteudo.length > 0) {
+                    displayResults(data.conteudo);
+                    showMessage(`✅ Sucesso! Total de registros: ${data.totalRegistros}`, "bg-green-100 text-green-700");
+                } else {
+                    showMessage("Nenhum resultado encontrado para este produto.", "bg-orange-100 text-orange-700");
+                    hideResults();
+                }
+
+            } catch (error) {
+                console.error('Erro:', error);
+                showMessage(`❌ Ocorreu um erro: ${error.message}`, "bg-red-100 text-red-700");
+                hideResults();
+            }
+        }
+
+        function displayResults(data) {
+            const prices = data.map(item => item.produto.venda.valorVenda);
+            
+            // Cálculos estatísticos
+            const averagePrice = prices.reduce((sum, price) => sum + price, 0) / prices.length;
+            const modePrice = getMode(prices);
+            const medianPrice = getMedian(prices);
+
+            // Atualizar o card de resumo
+            document.getElementById('total-results').textContent = `Total de registros: ${data.length}`;
+            document.getElementById('average-price').textContent = `Preço Médio: R$ ${averagePrice.toFixed(2)}`;
+            document.getElementById('mode-price').textContent = `Preço mais comum: R$ ${modePrice ? modePrice.toFixed(2) : 'Não há'}`;
+            document.getElementById('median-price').textContent = `Mediana: R$ ${medianPrice.toFixed(2)}`;
+
+            // Listar os preços por estabelecimento
+            const storesList = document.getElementById('stores-list');
+            storesList.innerHTML = ''; // Limpar a lista antiga
+            
+            // Agrupar por estabelecimento
+            const storesData = {};
+            data.forEach(item => {
+                const nomeFantasia = item.estabelecimento.nomeFantasia || 'Estabelecimento não informado';
+                const valorVenda = item.produto.venda.valorVenda;
+                const dataVenda = item.produto.venda.dataVenda ? new Date(item.produto.venda.dataVenda).toLocaleDateString() : 'N/A';
+                
+                if (!storesData[nomeFantasia]) {
+                    storesData[nomeFantasia] = {
+                        prices: [],
+                        data: dataVenda
+                    };
+                }
+                storesData[nomeFantasia].prices.push(valorVenda);
+            });
+
+            for (const store in storesData) {
+                const prices = storesData[store].prices;
+                const minPrice = Math.min(...prices);
+                const li = document.createElement('li');
+                li.className = 'border-b last:border-b-0 py-2 flex justify-between items-center';
+                li.innerHTML = `
+                    <span class="font-semibold text-gray-700">${store}</span>
+                    <span class="font-bold text-lg text-green-600">R$ ${minPrice.toFixed(2)}</span>
+                `;
+                storesList.appendChild(li);
+            }
+            
+            document.getElementById('results-container').style.display = 'block';
+        }
+
+        function showMessage(message, colorClass) {
+            const statusDiv = document.getElementById('status-message');
+            statusDiv.textContent = message;
+            statusDiv.className = `mt-4 p-3 rounded-lg text-center ${colorClass}`;
+            statusDiv.style.display = 'block';
+        }
+
+        function hideResults() {
+            document.getElementById('results-container').style.display = 'none';
+        }
+
+        // Funções auxiliares para cálculos estatísticos
+        function getMode(arr) {
+            const counts = {};
+            arr.forEach(num => counts[num] = (counts[num] || 0) + 1);
+            let mode = null;
+            let maxCount = 0;
+            for (const num in counts) {
+                if (counts[num] > maxCount) {
+                    maxCount = counts[num];
+                    mode = parseFloat(num);
+                }
+            }
+            // Verifica se há um único modo, se não, retorna null
+            const modes = Object.keys(counts).filter(key => counts[key] === maxCount);
+            return modes.length === 1 ? parseFloat(modes[0]) : null;
+        }
+
+        function getMedian(arr) {
+            const sortedArr = [...arr].sort((a, b) => a - b);
+            const mid = Math.floor(sortedArr.length / 2);
+            return sortedArr.length % 2 !== 0 ? sortedArr[mid] : (sortedArr[mid - 1] + sortedArr[mid]) / 2;
+        }
