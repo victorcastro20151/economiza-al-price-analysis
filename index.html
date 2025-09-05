@@ -18,15 +18,6 @@
     <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-2xl">
         <h1 class="text-3xl font-bold mb-6 text-center text-gray-800">Economiza Alagoas - Pesquisa de Preços</h1>
         <div class="mb-4">
-            <label for="municipality-select" class="block text-gray-700 font-semibold mb-2">Selecione o Município:</label>
-            <select id="municipality-select" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="2704302" selected>Maceió</option>
-                <option value="2700300">Arapiraca</option>
-                <option value="2706307">Palmeira dos Índios</option>
-                <option value="2709301">União dos Palmares</option>
-            </select>
-        </div>
-        <div class="mb-4">
             <label for="search-term" class="block text-gray-700 font-semibold mb-2">Digite o produto:</label>
             <div class="flex rounded-lg shadow-sm">
                 <input type="text" id="search-term" class="flex-1 p-3 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: Arroz Tio João 5kg">
@@ -36,6 +27,12 @@
                     </svg>
                 </button>
             </div>
+        </div>
+
+        <!-- Nova caixa de seleção para município -->
+        <div class="mb-4">
+            <label for="city-select" class="block text-gray-700 font-semibold mb-2">Selecione o Município:</label>
+            <select id="city-select" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
         </div>
 
         <div id="status-message" class="mt-4 p-3 rounded-lg text-center" style="display: none;"></div>
@@ -54,14 +51,35 @@
                 <ul id="stores-list" class="space-y-2"></ul>
             </div>
         </div>
-    </div>
-    <div class="mt-4 text-center">
-        <a href="http://economizaalagoas.sefaz.al.gov.br/" target="_blank" class="text-blue-600 hover:underline">Visite o site oficial do governo</a>
+
+        <!-- Link para o site oficial -->
+        <div class="text-center mt-6">
+            <a href="https://economizaalagoas.sefaz.al.gov.br" target="_blank" class="text-blue-600 hover:text-blue-800 text-sm font-semibold transition-colors duration-200">
+                Acessar site oficial Economiza Alagoas
+            </a>
+        </div>
     </div>
 
     <script>
         // URL da sua Cloud Function implantada no Firebase
         const API_URL = "https://us-central1-dev-zephyr-468119-k0.cloudfunctions.net/proxy_api";
+
+        // Cidades e seus códigos IBGE para a caixa de seleção
+        const cities = [
+            { name: 'Maceió', ibge: 2704302 },
+            { name: 'Arapiraca', ibge: 2700300 },
+            { name: 'Palmeira dos Índios', ibge: 2706307 },
+            { name: 'Rio Largo', ibge: 2707602 }
+        ];
+
+        // Popula a caixa de seleção de municípios
+        const citySelect = document.getElementById('city-select');
+        cities.forEach(city => {
+            const option = document.createElement('option');
+            option.value = city.ibge;
+            option.textContent = city.name;
+            citySelect.appendChild(option);
+        });
 
         document.getElementById('search-button').addEventListener('click', fetchData);
         document.getElementById('search-term').addEventListener('keypress', function(e) {
@@ -72,7 +90,7 @@
 
         async function fetchData() {
             const searchTerm = document.getElementById('search-term').value.trim();
-            const municipalityCode = document.getElementById('municipality-select').value;
+            const selectedCityIBGE = document.getElementById('city-select').value;
 
             if (!searchTerm) {
                 showMessage("Por favor, digite um produto para pesquisar.", "bg-red-100 text-red-700");
@@ -85,7 +103,7 @@
             const payload = {
                 "endpoint": "produto/pesquisa",
                 "produto": {"descricao": searchTerm},
-                "estabelecimento": {"municipio": {"codigoIBGE": municipalityCode}},
+                "estabelecimento": {"municipio": {"codigoIBGE": parseInt(selectedCityIBGE)}},
                 "dias": 5,
                 "pagina": 1,
                 "registrosPorPagina": 500
@@ -117,7 +135,7 @@
 
             } catch (error) {
                 console.error('Erro:', error);
-                showMessage(`❌ Ocorreu um erro: ${error.message}`, "bg-red-100 text-red-700");
+                showMessage(`❌ Ocorreu um erro: ${error.message}. Por favor, verifique a conexão e tente novamente.`, "bg-red-100 text-red-700");
                 hideResults();
             }
         }
@@ -204,3 +222,6 @@
             const mid = Math.floor(sortedArr.length / 2);
             return sortedArr.length % 2 !== 0 ? sortedArr[mid] : (sortedArr[mid - 1] + sortedArr[mid]) / 2;
         }
+    </script>
+</body>
+</html>
